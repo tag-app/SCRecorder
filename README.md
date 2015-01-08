@@ -31,7 +31,7 @@ If you are using cocoapods, you can use this project with the following Podfile
 
 ```ruby
 	platform :ios, '7.0'
-	pod 'SCRecorder'
+	pod 'SCRecorderTAG'
 ```
 
 Getting started
