@@ -385,4 +385,19 @@ typedef NS_ENUM(NSInteger, SCFlashMode) {
  */
 + (BOOL)isRecordSessionQueue;
 
+/**
+ Zooms to a scale
+ */
+- (void)adjustZoomLevelToScale:(CGFloat)scale;
+
+/**
+ Gets current zoom threshold
+ */
+- (CGFloat)getCurrentZoomThreshhold;
+
+/**
+ Returns current AVDevice thats being used
+ */
+- (AVCaptureDevice *)getCurrentDevice;
+
 @end

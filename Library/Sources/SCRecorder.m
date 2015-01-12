@@ -1358,4 +1358,36 @@
     return dispatch_get_specific(kSCRecorderRecordSessionQueueKey) != nil;
 }
 
+- (void)adjustZoomLevelToScale:(CGFloat)scale {
+    NSError *error;
+    NSArray * videoDevices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+   	for (AVCaptureDevice * device in videoDevices) {
+        if (device.position == (AVCaptureDevicePosition)_device) {
+            [device lockForConfiguration:&error];
+            device.videoZoomFactor = scale;
+            [device unlockForConfiguration];
+        }
+    }
+}
+
+- (CGFloat)getCurrentZoomThreshhold {
+    NSArray *videoDevices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    for (AVCaptureDevice * device in videoDevices) {
+        if (device.position == (AVCaptureDevicePosition)_device) {
+            return device.activeFormat.videoZoomFactorUpscaleThreshold;
+        }
+    }
+    return 0.0f;
+}
+
+- (AVCaptureDevice *)getCurrentDevice {
+    NSArray *videoDevices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+    for (AVCaptureDevice * device in videoDevices) {
+        if (device.position == (AVCaptureDevicePosition)_device) {
+            return device;
+        }
+    }
+    return nil;
+}
+
 @end
