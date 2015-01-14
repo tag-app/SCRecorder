@@ -239,6 +239,11 @@ typedef NS_ENUM(NSInteger, SCFlashMode) {
 + (SCRecorder*)recorder;
 
 /**
+ Return the unlying video device
+ */
+- (AVCaptureDevice*)videoDevice;
+
+/**
  Create the AVCaptureSession
  Calling this method will the captureSesion and configure it properly.
  This takes a completion block as a convenience for all the errors that can happen,
@@ -394,10 +399,5 @@ typedef NS_ENUM(NSInteger, SCFlashMode) {
  Gets current zoom threshold
  */
 - (CGFloat)getCurrentZoomThreshhold;
-
-/**
- Returns current AVDevice thats being used
- */
-- (AVCaptureDevice *)getCurrentDevice;
 
 @end
