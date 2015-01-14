@@ -61,7 +61,7 @@ NSString *SCRecordSessionCacheDirectory = @"CacheDirectory";
         } else {
             shouldRecomputeDuration = YES;
         }
-        
+    
         if (shouldRecomputeDuration) {
             _segmentsDuration = self.assetRepresentingRecordSegments.duration;
             
@@ -83,6 +83,7 @@ NSString *SCRecordSessionCacheDirectory = @"CacheDirectory";
     
     if (self) {
         _recordSegments = [[NSMutableArray alloc] init];
+        _recordSegmentsDurations = [[NSMutableArray alloc] init];
         
         _assetWriter = nil;
         _videoInput = nil;
@@ -149,6 +150,7 @@ NSString *SCRecordSessionCacheDirectory = @"CacheDirectory";
         NSURL *fileUrl = [_recordSegments objectAtIndex:segmentIndex];
         CMTime segmentDuration = [(AVAsset *)[AVAsset assetWithURL:fileUrl] duration];
         [_recordSegments removeObjectAtIndex:segmentIndex];
+        [_recordSegmentsDurations removeObjectAtIndex:segmentIndex];
         
         if (CMTIME_IS_VALID(segmentDuration)) {
 //            NSLog(@"Removed duration of %fs", CMTimeGetSeconds(segmentDuration));
@@ -184,6 +186,7 @@ NSString *SCRecordSessionCacheDirectory = @"CacheDirectory";
                 [self removeFile:fileUrl];
             }
             [_recordSegments removeObjectAtIndex:0];
+            [_recordSegmentsDurations removeObjectAtIndex:0];
         }
         
         _segmentsDuration = kCMTimeZero;
@@ -404,6 +407,7 @@ NSString *SCRecordSessionCacheDirectory = @"CacheDirectory";
 - (void)_addSegment:(NSURL *)fileUrl duration:(CMTime)duration {
     [self _dispatchSynchronouslyOnSafeQueue:^{
         [_recordSegments addObject:fileUrl];
+        [_recordSegmentsDurations addObject:[NSNumber numberWithFloat:CMTimeGetSeconds(duration)]];
         _segmentsDuration = CMTimeAdd(_segmentsDuration, duration);
     }];
 }

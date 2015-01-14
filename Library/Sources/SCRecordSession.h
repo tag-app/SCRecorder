@@ -52,6 +52,11 @@ extern const NSString *SCRecordSessionCacheDirectory;
 @property (copy, nonatomic) NSString *recordSegmentsDirectory;
 
 /**
+ Contains the durations of all the record seesion segments
+ */
+@property (readonly, nonatomic) NSMutableArray *recordSegmentsDurations;
+
+/**
  The output file type used for the AVAssetWriter.
  If null, AVFileTypeMPEG4 will be used for a video file, AVFileTypeAppleM4A for an audio file
  */
