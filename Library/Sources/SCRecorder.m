@@ -134,7 +134,7 @@
 
 - (void)updateVideoOrientation {
     if (!_recordSession.currentSegmentHasAudio && !_recordSession.currentSegmentHasVideo) {
-        [_recordSession uninitialize];
+        [_recordSession deinitialize];
     }
     
     AVCaptureVideoOrientation videoOrientation = [self actualVideoOrientation];
@@ -1162,7 +1162,7 @@
 
 - (void)setVideoOrientation:(AVCaptureVideoOrientation)videoOrientation {
     _videoOrientation = videoOrientation;
-    [[_videoOutput connectionWithMediaType:AVMediaTypeVideo] setVideoOrientation:videoOrientation];
+    [self updateVideoOrientation];
 }
 
 - (void)setRecordSession:(SCRecordSession *)recordSession {
