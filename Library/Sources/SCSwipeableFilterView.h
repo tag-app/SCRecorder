@@ -34,4 +34,6 @@
  */
 @property (assign, nonatomic) BOOL refreshAutomaticallyWhenScrolling;
 
+- (void)resetOffset;
+
 @end

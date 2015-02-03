@@ -100,6 +100,11 @@ static CGRect CGRectTranslate(CGRect rect, CGFloat width, CGFloat maxWidth) {
     [self updateCurrentSelected];
 }
 
+- (void)resetOffset {
+    _selectFilterScrollView.contentOffset = CGPointMake(0, 0);
+    [self updateCurrentSelected];
+}
+
 - (void)scrollViewDidScroll:(UIScrollView *)scrollView {
     CGFloat width = scrollView.frame.size.width;
     CGFloat contentOffsetX = scrollView.contentOffset.x;
