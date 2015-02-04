@@ -409,8 +409,8 @@ NSString *SCRecordSessionCacheDirectory = @"CacheDirectory";
 - (void)_addSegment:(NSURL *)fileUrl duration:(CMTime)duration {
     [self _dispatchSynchronouslyOnSafeQueue:^{
         [_recordSegments addObject:fileUrl];
-        [_recordSegmentsDurations addObject:[NSNumber numberWithFloat:CMTimeGetSeconds(duration)]];
         _segmentsDuration = CMTimeAdd(_segmentsDuration, duration);
+        [_recordSegmentsDurations addObject:[NSNumber numberWithFloat:CMTimeGetSeconds(_segmentsDuration)]];
     }];
 }
 
