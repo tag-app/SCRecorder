@@ -86,8 +86,8 @@ static CGRect CGRectTranslate(CGRect rect, CGFloat width, CGFloat maxWidth) {
     [self updateCurrentSelected];
     
     _selectFilterScrollView = nil;
-    _cameraImageView = nil;
-    [self _commonInit];
+    self.CIImage = nil;
+    [self commonInit];
 }
 
 - (void)updateCurrentSelected {
