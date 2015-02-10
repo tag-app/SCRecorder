@@ -74,6 +74,22 @@ static CGRect CGRectTranslate(CGRect rect, CGFloat width, CGFloat maxWidth) {
     return rect;
 }
 
+- (void)reset {
+    
+    [_selectFilterScrollView setContentOffset:CGPointZero animated:NO];
+    
+    CGFloat width = _selectFilterScrollView.frame.size.width;
+    CGFloat ratio = _selectFilterScrollView.contentOffset.x / width;
+    
+    _filterGroupIndexRatio = ratio;
+    
+    [self updateCurrentSelected];
+    
+    _selectFilterScrollView = nil;
+    _cameraImageView = nil;
+    [self _commonInit];
+}
+
 - (void)updateCurrentSelected {
     NSUInteger filterGroupsCount = self.filterGroups.count;
     NSInteger selectedIndex = (NSInteger)((_selectFilterScrollView.contentOffset.x + _selectFilterScrollView.frame.size.width / 2) / _selectFilterScrollView.frame.size.width) % filterGroupsCount;
