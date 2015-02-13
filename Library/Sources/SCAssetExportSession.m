@@ -75,6 +75,27 @@
     return [_videoPixelAdaptor appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
 }
 
+- (CIImage *)imageByProcessingImage:(CIImage *)image {
+    CIImage *result = image;
+    if(self.videoConfiguration.watermarkImage != nil) {
+        
+        CIImage *background = image;
+        CIImage *foreground = [[CIImage alloc] initWithCGImage:self.videoConfiguration.watermarkImage.CGImage];
+        
+        CIFilter *blendFilter = [CIFilter filterWithName:@"CISourceAtopCompositing"];
+        [blendFilter setDefaults];
+        [blendFilter setValue:foreground forKey:kCIInputImageKey];
+        [blendFilter setValue:background forKey:kCIInputBackgroundImageKey];
+        
+        foreground = [blendFilter outputImage];
+        background = nil;
+        blendFilter = nil;
+        
+        result = [foreground copy];
+    }
+    return result;
+}
+
 - (BOOL)processSampleBuffer:(CMSampleBufferRef)sampleBuffer {
     if (_ciContext != nil) {
         CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
@@ -82,13 +103,26 @@
         if (_eaglContext == nil) {
             CVPixelBufferLockBaseAddress(pixelBuffer, 0);
         }
-
+        
         CIImage *image = [CIImage imageWithCVPixelBuffer:pixelBuffer];
-        CIImage *result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
-
+        // CIImage *result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
+        
+        CIImage *result = nil;
+        
+        if (_videoConfiguration.filterGroup != nil || ![_videoConfiguration.filterGroup isEqual:[NSNull null]]) {
+            if(_videoConfiguration.filterGroup.filters.count > 0) {
+                result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
+                result = [self imageByProcessingImage:result];
+            } else {
+                result = [self imageByProcessingImage:image];
+            }
+        } else {
+            result = [self imageByProcessingImage:image];
+        }
+        
         CVPixelBufferRef outputPixelBuffer = nil;
         CVReturn ret = CVPixelBufferPoolCreatePixelBuffer(NULL, [_videoPixelAdaptor pixelBufferPool], &outputPixelBuffer);
-
+        
         if (ret == kCVReturnSuccess) {
             CVPixelBufferLockBaseAddress(outputPixelBuffer, 0);
             
@@ -138,14 +172,14 @@
                     if (input == _videoInput) {
                         CMTime currentVideoTime = CMSampleBufferGetPresentationTimeStamp(buffer);
                         if (CMTIME_COMPARE_INLINE(currentVideoTime, >=, _nextAllowedVideoFrame)) {
-//                            NSLog(@"Appending at %fs (%fs)", CMTimeGetSeconds(currentVideoTime), CMTimeGetSeconds(CMSampleBufferGetOutputDuration(buffer)));
+                            //                            NSLog(@"Appending at %fs (%fs)", CMTimeGetSeconds(currentVideoTime), CMTimeGetSeconds(CMSampleBufferGetOutputDuration(buffer)));
                             shouldReadNextBuffer = [self processSampleBuffer:buffer];
                             
                             if (_videoConfiguration.maxFrameRate > 0) {
                                 _nextAllowedVideoFrame = CMTimeAdd(currentVideoTime, CMTimeMake(1, _videoConfiguration.maxFrameRate));
                             }
                         } else {
-//                            NSLog(@"Skipping at %fs (%fs)", CMTimeGetSeconds(currentVideoTime), CMTimeGetSeconds(CMSampleBufferGetOutputDuration(buffer)));
+                            //                            NSLog(@"Skipping at %fs (%fs)", CMTimeGetSeconds(currentVideoTime), CMTimeGetSeconds(CMSampleBufferGetOutputDuration(buffer)));
                         }
                     } else {
                         shouldReadNextBuffer = [input appendSampleBuffer:buffer];
@@ -185,7 +219,7 @@
             _ciContext = [CIContext contextWithOptions:options];
         } else {
             NSDictionary *options = @{ kCIContextWorkingColorSpace : [NSNull null], kCIContextOutputColorSpace : [NSNull null] };
-
+            
             _ciContext = [CIContext contextWithEAGLContext:_eaglContext options:options];
         }
         
@@ -220,6 +254,8 @@
 }
 
 - (AVVideoComposition *)_buildVideoCompositionWithOutputSize:(CGSize)videoSize videoTrack:(AVAssetTrack *)videoTrack {
+    
+    return nil;
     UIImage *watermarkImage = self.videoConfiguration.watermarkImage;
     
     if (watermarkImage != nil) {
@@ -266,7 +302,7 @@
         
         instruction.layerInstructions = [NSArray arrayWithObject:layerInstruction];
         videoComp.instructions = [NSArray arrayWithObject:instruction];
-                
+        
         return videoComp;
     }
     
@@ -280,7 +316,7 @@
     [[NSFileManager defaultManager] removeItemAtURL:self.outputUrl error:nil];
     
     _writer = [AVAssetWriter assetWriterWithURL:self.outputUrl fileType:self.outputFileType error:&error];
-
+    
     EnsureSuccess(error, completionHandler);
     
     _reader = [AVAssetReader assetReaderWithAsset:self.inputAsset error:&error];
@@ -321,7 +357,7 @@
     AVAssetTrack *videoTrack = nil;
     if (videoTracks.count > 0 && self.videoConfiguration.enabled && !self.videoConfiguration.shouldIgnore) {
         videoTrack = [videoTracks objectAtIndex:0];
-
+        
         // Input
         NSDictionary *videoSettings = [_videoConfiguration createAssetWriterOptionsWithVideoSize:videoTrack.naturalSize];
         videoSize.width = [videoSettings[AVVideoWidthKey] doubleValue];
@@ -337,9 +373,9 @@
         // Output
         _pixelFormat = [self needsCIContext] ? kVideoPixelFormatTypeForCI : kVideoPixelFormatTypeDefault;
         NSDictionary *settings = @{
-                               (id)kCVPixelBufferPixelFormatTypeKey     : [NSNumber numberWithUnsignedInt:_pixelFormat],
-                               (id)kCVPixelBufferIOSurfacePropertiesKey : [NSDictionary dictionary]
-                               };
+                                   (id)kCVPixelBufferPixelFormatTypeKey     : [NSNumber numberWithUnsignedInt:_pixelFormat],
+                                   (id)kCVPixelBufferIOSurfacePropertiesKey : [NSDictionary dictionary]
+                                   };
         
         AVVideoComposition *videoComposition = self.videoConfiguration.composition;
         
@@ -358,7 +394,7 @@
         }
         
         reader.alwaysCopiesSampleData = NO;
-
+        
         if ([_reader canAddOutput:reader]) {
             [_reader addOutput:reader];
             _videoOutput = reader;
