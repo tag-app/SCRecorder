@@ -31,6 +31,7 @@
     BOOL _animationsWereEnabled;
     uint32_t _pixelFormat;
     CMTime _nextAllowedVideoFrame;
+    SCFilter *_watermarkFilter;
 }
 
 @end
@@ -75,26 +76,26 @@
     return [_videoPixelAdaptor appendPixelBuffer:pixelBuffer withPresentationTime:presentationTime];
 }
 
-- (CIImage *)imageByProcessingImage:(CIImage *)image {
-    CIImage *result = image;
-    if(self.videoConfiguration.watermarkImage != nil) {
-        
-        CIImage *background = image;
-        CIImage *foreground = [[CIImage alloc] initWithCGImage:self.videoConfiguration.watermarkImage.CGImage];
-        
-        CIFilter *blendFilter = [CIFilter filterWithName:@"CISourceAtopCompositing"];
-        [blendFilter setDefaults];
-        [blendFilter setValue:foreground forKey:kCIInputImageKey];
-        [blendFilter setValue:background forKey:kCIInputBackgroundImageKey];
-        
-        foreground = [blendFilter outputImage];
-        background = nil;
-        blendFilter = nil;
-        
-        result = [foreground copy];
-    }
-    return result;
-}
+//- (CIImage *)imageByProcessingImage:(CIImage *)image {
+//    CIImage *result = image;
+//    if(self.videoConfiguration.watermarkImage != nil) {
+//
+//        CIImage *background = image;
+//        CIImage *foreground = [[CIImage alloc] initWithCGImage:self.videoConfiguration.watermarkImage.CGImage];
+//
+//        CIFilter *blendFilter = [CIFilter filterWithName:@"CISourceAtopCompositing"];
+//        [blendFilter setDefaults];
+//        [blendFilter setValue:foreground forKey:kCIInputImageKey];
+//        [blendFilter setValue:background forKey:kCIInputBackgroundImageKey];
+//
+//        foreground = [blendFilter outputImage];
+//        background = nil;
+//        blendFilter = nil;
+//
+//        result = [foreground copy];
+//    }
+//    return result;
+//}
 
 - (BOOL)processSampleBuffer:(CMSampleBufferRef)sampleBuffer {
     if (_ciContext != nil) {
@@ -104,20 +105,29 @@
             CVPixelBufferLockBaseAddress(pixelBuffer, 0);
         }
         
+        //        CIImage *image = [CIImage imageWithCVPixelBuffer:pixelBuffer];
+        //        // CIImage *result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
+        //
+        //        CIImage *result = nil;
+        //
+        //        if (_videoConfiguration.filterGroup != nil || ![_videoConfiguration.filterGroup isEqual:[NSNull null]]) {
+        //            if(_videoConfiguration.filterGroup.filters.count > 0) {
+        //                result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
+        //                result = [self imageByProcessingImage:result];
+        //            } else {
+        //                result = [self imageByProcessingImage:image];
+        //            }
+        //        } else {
+        //            result = [self imageByProcessingImage:image];
+        //        }
+        //
         CIImage *image = [CIImage imageWithCVPixelBuffer:pixelBuffer];
-        // CIImage *result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
+        CMTime time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
+        CIImage *result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
         
-        CIImage *result = nil;
-        
-        if (_videoConfiguration.filterGroup != nil || ![_videoConfiguration.filterGroup isEqual:[NSNull null]]) {
-            if(_videoConfiguration.filterGroup.filters.count > 0) {
-                result = [_videoConfiguration.filterGroup imageByProcessingImage:image];
-                result = [self imageByProcessingImage:result];
-            } else {
-                result = [self imageByProcessingImage:image];
-            }
-        } else {
-            result = [self imageByProcessingImage:image];
+        if (_watermarkFilter != nil) {
+            [_watermarkFilter setParameterValue:result forKey:kCIInputBackgroundImageKey];
+            result = [_watermarkFilter parameterValueForKey:kCIOutputImageKey];
         }
         
         CVPixelBufferRef outputPixelBuffer = nil;
@@ -238,7 +248,7 @@
 }
 
 - (BOOL)needsCIContext {
-    return _videoConfiguration.filterGroup.filters.count > 0;
+    return _videoConfiguration.filterGroup.filters.count > 0 || _videoConfiguration.watermarkImage != nil;
 }
 
 - (void)setupPixelBufferAdaptor:(CGSize)videoSize {
@@ -251,6 +261,49 @@
         
         _videoPixelAdaptor = [AVAssetWriterInputPixelBufferAdaptor assetWriterInputPixelBufferAdaptorWithAssetWriterInput:_videoInput sourcePixelBufferAttributes:pixelBufferAttributes];
     }
+}
+
+- (SCFilter *)_buildWatermarkFilterForVideoTrack:(AVAssetTrack *)videoTrack {
+    UIImage *watermarkImage = self.videoConfiguration.watermarkImage;
+    
+    if (watermarkImage != nil) {
+        CGSize videoSize = videoTrack.naturalSize;
+        
+        CGRect watermarkFrame = self.videoConfiguration.watermarkFrame;
+        
+        switch (self.videoConfiguration.watermarkAnchorLocation) {
+            case SCWatermarkAnchorLocationTopLeft:
+                
+                break;
+            case SCWatermarkAnchorLocationTopRight:
+                watermarkFrame.origin.x = videoSize.width - watermarkFrame.size.width - watermarkFrame.origin.x;
+                break;
+            case SCWatermarkAnchorLocationBottomLeft:
+                watermarkFrame.origin.y = videoSize.height - watermarkFrame.size.height - watermarkFrame.origin.y;
+                
+                break;
+            case SCWatermarkAnchorLocationBottomRight:
+                watermarkFrame.origin.y = videoSize.height - watermarkFrame.size.height - watermarkFrame.origin.y;
+                watermarkFrame.origin.x = videoSize.width - watermarkFrame.size.width - watermarkFrame.origin.x;
+                break;
+        }
+        
+        UIGraphicsBeginImageContextWithOptions(videoSize, NO, 1);
+        
+        [watermarkImage drawInRect:watermarkFrame];
+        
+        UIImage *generatedWatermarkImage = UIGraphicsGetImageFromCurrentImageContext();
+        
+        UIGraphicsEndImageContext();
+        
+        SCFilter *watermarkFilter = [SCFilter filterWithName:@"CISourceOverCompositing"];
+        CIImage *watermarkCIImage = [CIImage imageWithCGImage:generatedWatermarkImage.CGImage];
+        [watermarkFilter setParameterValue:watermarkCIImage forKey:kCIInputImageKey];
+        
+        return watermarkFilter;
+    }
+    
+    return nil;
 }
 
 - (AVVideoComposition *)_buildVideoCompositionWithOutputSize:(CGSize)videoSize videoTrack:(AVAssetTrack *)videoTrack {
@@ -379,6 +432,8 @@
         
         AVVideoComposition *videoComposition = self.videoConfiguration.composition;
         
+        _watermarkFilter = [self _buildWatermarkFilterForVideoTrack:videoTrack];
+        
         if (videoComposition == nil) {
             videoComposition = [self _buildVideoCompositionWithOutputSize:CGSizeMake([videoSettings[AVVideoWidthKey] floatValue], [videoSettings[AVVideoHeightKey] floatValue]) videoTrack:videoTrack];
         }
@@ -454,6 +509,10 @@
 
 - (AVAssetWriterInput *)videoInput {
     return _videoInput;
+}
+
+- (AVAssetWriterInput *)audioInput {
+    return _audioInput;
 }
 
 - (AVAssetWriterInput *)audioInput {
