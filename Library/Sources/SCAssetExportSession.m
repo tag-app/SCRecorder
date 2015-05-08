@@ -515,10 +515,6 @@
     return _audioInput;
 }
 
-- (AVAssetWriterInput *)audioInput {
-    return _audioInput;
-}
-
 - (AVAssetReader *)reader {
     return _reader;
 }
