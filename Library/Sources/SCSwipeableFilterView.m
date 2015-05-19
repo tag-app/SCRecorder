@@ -60,7 +60,7 @@
     [super layoutSubviews];
     
     _selectFilterScrollView.frame = self.bounds;
-
+    
     [self updateScrollViewContentSize];
 }
 
@@ -70,7 +70,7 @@
 
 static CGRect CGRectTranslate(CGRect rect, CGFloat width, CGFloat maxWidth) {
     rect.origin.x += width;
-
+    
     return rect;
 }
 
@@ -84,10 +84,7 @@ static CGRect CGRectTranslate(CGRect rect, CGFloat width, CGFloat maxWidth) {
     _filterGroupIndexRatio = ratio;
     
     [self updateCurrentSelected];
-    
-    _selectFilterScrollView = nil;
-    self.CIImage = nil;
-    [self commonInit];
+    [self setNeedsDisplay];
 }
 
 - (void)updateCurrentSelected {
