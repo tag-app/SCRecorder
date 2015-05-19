@@ -47,6 +47,8 @@
 // If an error occured during the export, this will contain that error
 @property (readonly, nonatomic) NSError *error;
 
+@property (nonatomic, assign, getter=isCanceled) BOOL canceled;
+
 - (id)init;
 
 // Init with the inputAsset
